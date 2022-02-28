@@ -27,7 +27,7 @@ export default function Home({ post }: HomeProps) {
           Welcome to <a href="https://nextjs.org">Next.js!</a>
         </h1>
 
-        <h1 className="text-3xl font-bold underline">{post?.title}</h1>
+        <h1 className="text-3xl font-bold underline bg-gray-400">{post?.title}</h1>
         <p className={styles.description}>
           Get started by editing <code className={styles.code}>pages/index.js</code>
         </p>
