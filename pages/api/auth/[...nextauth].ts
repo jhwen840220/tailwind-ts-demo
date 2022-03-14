@@ -1,17 +1,7 @@
-import NextAuth from "next-auth";
-import type { NextApiRequest, NextApiResponse } from "next";
-import GoogleProvider from "next-auth/providers/google";
+import NextAuth from 'next-auth';
+import type { NextApiRequest, NextApiResponse } from 'next';
+import GoogleProvider from 'next-auth/providers/google';
 
-// export default NextAuth({
-//   // Configure one or more authentication providers
-//   providers: [
-//     GoogleProvider({
-//       clientId: process.env.GOOGLE_CLIENT_ID,
-//       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-//     }),
-//     // ...add more providers here
-//   ],
-// });
 export default async function auth(req: NextApiRequest, res: NextApiResponse) {
   const providers = [
     GoogleProvider({
@@ -28,13 +18,14 @@ export default async function auth(req: NextApiRequest, res: NextApiResponse) {
     },
     session: {
       // This is the default. The session is saved in a cookie and never persisted anywhere.
-      strategy: "jwt",
+      strategy: 'jwt',
     },
     // Enable debug messages in the console if you are having problems
     debug: true,
 
     callbacks: {
       async session({ session, token }) {
+        console.log(token);
         // Send properties to the client, like an access_token from a provider.
         session.accessToken = token.accessToken;
         session.refreshToken = token.refreshToken;
