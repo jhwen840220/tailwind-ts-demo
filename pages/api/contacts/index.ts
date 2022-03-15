@@ -6,6 +6,7 @@ export default async function handler(req, res) {
     body,
     headers: { authorization },
   } = req;
+
   if (method === 'GET') {
     const response = await fetch(`http://localhost:3333/contacts`);
     const data = await response.json();
@@ -21,7 +22,7 @@ export default async function handler(req, res) {
         Authorization: authorization,
       },
     });
-    const data = await response.json();
+    const data: any = await response.json();
 
     res.status(data.statusCode).json(data);
   }

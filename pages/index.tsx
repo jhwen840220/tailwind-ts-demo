@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import Head from "next/head";
 import Image from "next/image";
 import { GetServerSideProps } from "next";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
+import { Fetch, setCookie, getCookie, logOut } from "utils";
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -10,48 +11,52 @@ import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
+import Data from 'components/Data';
 
 export default function Home() {
   const [isConnecting, setIsConnecting] = useState(true)
   const [isLogin, setIsLogin] = useState(false)
   const { data: session, status } = useSession();
-  const [token, setToken] = useState('')
   useEffect(() => {
     if (session !== undefined) {
-
       if (session !== null) {
-        fetch("/api/auths/signin", {
-          method: "POST",
-          headers: {
-            'content-type': 'application/json'
-          },
-          body: JSON.stringify({
-            username: session.user.email,
-            password: session.id
+        if (!getCookie('token')) {
+          fetch("/api/auths/signin", {
+            method: "POST",
+            headers: {
+              'content-type': 'application/json'
+            },
+            body: JSON.stringify({
+              username: session.user.email,
+              password: session.id
+            })
           })
-        })
-          .then(res => res.json())
-          .then(data => {
-            setIsLogin(true)
-            setIsConnecting(false)
-
-            if (data.statusCode === 401) {
-              fetch("/api/auths/signup", {
-                method: "POST",
-                headers: {
-                  'content-type': 'application/json'
-                },
-                body: JSON.stringify({
-                  username: session.user.email,
-                  password: session.id,
-                  name: session.user.name
-                })
-              })
-            } else {
-              setToken(`Bearer ${data.access_token}`)
+            .then(res => res.json())
+            .then(data => {
+              setIsLogin(true)
+              setIsConnecting(false)
               handleGetContacts()
-            }
-          })
+              if (data.statusCode === 401) {
+                fetch("/api/auths/signup", {
+                  method: "POST",
+                  headers: {
+                    'content-type': 'application/json'
+                  },
+                  body: JSON.stringify({
+                    username: session.user.email,
+                    password: session.id,
+                    name: session.user.name
+                  })
+                })
+              } else {
+                setCookie('token', `Bearer ${data.access_token}`, 1)
+              }
+            })
+        } else {
+          setIsLogin(true)
+          setIsConnecting(false)
+          handleGetContacts()
+        }
 
       } else setIsConnecting(false)
     }
@@ -59,24 +64,33 @@ export default function Home() {
 
   const [rows, setRows] = useState([])
   const handleGetContacts = () => {
-    fetch("/api/contacts")
-      .then(res => res.json())
-      .then(data => {
-        setRows(data)
-      })
+    Fetch("/api/contacts", null, async res => {
+      const data = await res.json()
+      setRows(data)
+    })
   }
 
-  const handleAddContact = () => {
-    fetch("/api/contacts", {
-      method: "POST",
-      headers: {
-        'content-type': 'application/json',
-        'Authorization': token,
-      },
-      body: JSON.stringify({
-        "name": "Ted2",
-        "phone": "09837830812"
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const handleAddContact = (postData) => {
+    if (postData.name.length && postData.phone.length) {
+      Fetch("/api/contacts", {
+        method: "POST",
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(postData)
+      }, res => {
+        handleGetContacts()
       })
+    } else alert("請輸入Name & Phone")
+  }
+
+  const handleRemoveContact = id => {
+    Fetch(`/api/contacts/${id}`, {
+      method: "DELETE"
+    }, res => {
+      handleGetContacts()
     })
   }
 
@@ -91,44 +105,52 @@ export default function Home() {
         {session
           ? <>
             <span>{session.user.name} 您好！</span>
-            <button className="bg-sky-500 rounded py-1 px-2 hover:bg-sky-800" onClick={() => signOut()}>登出</button>
+            <button className="bg-sky-500 rounded py-1 px-2 hover:bg-sky-800" onClick={() => logOut()}>登出</button>
           </>
-          : <button onClick={() => signIn("google")}>登入</button>}
+          : <button className="bg-sky-500 rounded py-1 px-2 hover:bg-sky-800" onClick={() => signIn("google")}>登入</button>}
       </header>
       <main className="container mx-auto h-screen flex flex-col items-center justify-center">
-        <button onClick={handleAddContact}>test add</button>
         {isConnecting
           ? null
           : <>
             {!isLogin
               ? <div>您尚未登入</div>
-              : <TableContainer component={Paper}>
-                <Table sx={{ minWidth: 650 }} aria-label="simple table">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Name</TableCell>
-                      <TableCell align="right">Phone</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {rows.map((row, index) => (
-                      <TableRow
-                        key={index}
-                        sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                      >
-                        <TableCell component="th" scope="row">
-                          {row.name}
-                        </TableCell>
-                        <TableCell align="right">{row.phone}</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+              :
+              <>
+                <div className="p-3 flex items-center">
+                  <span>Name:</span>
+                  <input className="mx-2" type={"text"} value={name} onChange={e => setName(e.target.value)} />
+                  <span>Phone:</span>
+                  <input className="mx-2" type={"text"} value={phone} onChange={e => setPhone(e.target.value)} />
+                  <button className="bg-sky-500 rounded py-1 px-2 hover:bg-sky-800" onClick={() => { handleAddContact({ name, phone }) }}>新增</button>
+                </div>
+                <Paper sx={{ width: '500px' }}>
+                  <TableContainer sx={{ maxHeight: 440 }}>
+                    <Table stickyHeader aria-label="sticky table">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Name</TableCell>
+                          <TableCell align="right">Phone</TableCell>
+                          <TableCell>Actions</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {rows.map(row => (
+                          <TableRow
+                            key={row.id}
+                            sx={{ backgroundColor: '#bbb', '&:last-child td, &:last-child th': { border: 0 } }}
+                          >
+                            <Data id={row.id} name={row.name} phone={row.phone} onRemove={id => { handleRemoveContact(id) }} onEdit={data => { handleAddContact(data) }} />
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </Paper>
+              </>
             }
           </>
         }
-
       </main>
     </>
   );
