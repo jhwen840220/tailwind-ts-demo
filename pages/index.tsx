@@ -76,9 +76,6 @@ export default function Home() {
     if (postData.name.length && postData.phone.length) {
       Fetch("/api/contacts", {
         method: "POST",
-        headers: {
-          'content-type': 'application/json',
-        },
         body: JSON.stringify(postData)
       }, res => {
         handleGetContacts()

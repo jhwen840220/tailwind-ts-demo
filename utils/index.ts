@@ -8,7 +8,10 @@ export const Fetch = (path, options = {}, callback = null) => {
 
   fetch(path, {
     ...options,
-    headers: { ...options?.headers, Authorization: getCookie('token') },
+    headers: {
+      'content-type': 'application/json',
+      Authorization: getCookie('token'),
+    },
   })
     .then(res => {
       const { status } = res;
